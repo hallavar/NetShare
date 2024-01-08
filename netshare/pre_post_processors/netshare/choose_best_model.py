@@ -93,7 +93,6 @@ def choose_best_model(
                 if file.endswith(".csv"):
                     syn_dfs_names.append(file)
                     syn_df = pd.read_csv(os.path.join(syn_df_folder, file))
-
                     # truncate to raw data time range
                     if config["truncate"] == "per_chunk":
                         syn_df_truncated = syn_df[
@@ -107,7 +106,6 @@ def choose_best_model(
                         1.0 - len(syn_df_truncated) / len(syn_df))
 
                     syn_dfs.append(syn_df_truncated)
-
             best_syndf_idx, best_syndf = compare_rawdf_syndfs(
                 raw_df[syn_dfs[0].columns], syn_dfs, config_pre_post_processor
             )

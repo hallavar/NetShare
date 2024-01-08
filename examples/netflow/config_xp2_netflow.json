@@ -1,0 +1,219 @@
+{
+    "global_config": {
+        "original_data_file": "/home/aschoen/my_storage/aschoen/dataset/Dataset_Papier_Mars/long_FeatureSet/preprocessed/train_preprocessed_netshare.csv",
+        "overwrite": true,
+        "dataset_type": "netflow",
+        "n_chunks": 2,
+        "dp": false
+    },
+    "default": "single_event_per_row.json",
+    "pre_post_processor": {
+        "class": "NetsharePrePostProcessor",
+        "config": {
+        "max_flow_len": 10000,
+	    "timestamp": {
+                "column": "Timestamp",
+                "generation": true,
+                "encoding": "interarrival",
+                "normalization": "ZERO_ONE"
+        },
+        "word2vec": {
+                "vec_size": 10,
+                "model_name": "word2vec_vecSize",
+                "annoy_n_trees": 100,
+                "pretrain_model_path": null
+        },
+        "metadata": [
+                {
+                    "column": "Src IP",
+                    "type": "string",
+                    "encoding": "categorical"
+				},
+                {
+                    "column": "Dst IP",
+                    "type": "string",
+		    		"encoding": "categorical"
+                },
+                {
+                    "column": "Src Port",
+                    "type": "string",
+                    "encoding": "categorical"
+                },
+                {
+                    "column": "Dst Port",
+                    "type": "string",
+                    "encoding": "categorical"
+                },
+                {
+                    "column": "Protocol",
+                    "type": "string",
+                    "encoding": "categorical"
+                },
+				{
+					"column": "Day",
+					"type": "string",
+					"encoding": "categorical"
+				}
+            ],
+        "timeseries": [
+                {
+                    "column": "Flow Duration",
+                    "type": "float",
+                    "normalization": "ZERO_ONE",
+                    "log1p_norm": true
+                },
+				{
+                    "column": "Total packets",
+                    "type": "float",
+                    "normalization": "ZERO_ONE",
+                    "log1p_norm": true
+                },
+				{
+                    "column": "Total Length of Packet",
+                    "type": "float",
+                    "normalization": "ZERO_ONE",
+                    "log1p_norm": true
+                },
+				{
+                    "column": "Packet Length Max",
+                    "type": "float",
+                    "normalization": "ZERO_ONE",
+                    "log1p_norm": true
+                },
+				{
+                    "column": "Packet Length Min",
+                    "type": "float",
+                    "normalization": "ZERO_ONE",
+                    "log1p_norm": true
+                },
+				{
+                    "column": "Packet Length Mean",
+                    "type": "float",
+                    "normalization": "ZERO_ONE",
+                    "log1p_norm": true
+                },
+                {
+                    "column": "Packet Length Std",
+                    "type": "float",
+                    "normalization": "ZERO_ONE",
+                    "log1p_norm": true
+                },
+				{
+                    "column": "IAT Total",
+                    "type": "float",
+                    "normalization": "ZERO_ONE",
+                    "log1p_norm": true
+                },
+                {
+                    "column": "IAT Mean",
+                    "type": "float",
+                    "normalization": "ZERO_ONE",
+                    "log1p_norm": true
+                },
+                {
+                    "column": "IAT Std",
+                    "type": "float",
+                    "normalization": "ZERO_ONE",
+                    "log1p_norm": true
+                },
+                {
+                    "column": "IAT Max",
+                    "type": "float",
+                    "normalization": "ZERO_ONE",
+                    "log1p_norm": true
+                },
+	                   {
+                    "column": "IAT Min",
+                    "type": "float",
+                    "normalization": "ZERO_ONE",
+                    "log1p_norm": true
+                },
+                {
+                    "column": "PSH Flags",
+                    "type": "float",
+                    "normalization": "ZERO_ONE",
+                    "log1p_norm": true
+                },
+                {
+                    "column": "RST Flags",
+                    "type": "float",
+                    "normalization": "ZERO_ONE",
+                    "log1p_norm": true
+                },
+                {
+                    "column": "Header Length",
+                    "type": "float",
+                    "normalization": "ZERO_ONE",
+                    "log1p_norm": true
+                },
+				{
+                    "column": "Packets/s",
+                    "type": "float",
+                    "normalization": "ZERO_ONE",
+                    "log1p_norm": true
+                },
+               	{
+                    "column": "Segment Size Avg",
+                    "type": "float",
+                    "normalization": "ZERO_ONE",
+                    "log1p_norm": true
+                },				
+                {
+                    "column": "Bytes/Bulk Avg",
+                    "type": "float",
+                    "normalization": "ZERO_ONE",
+                    "log1p_norm": true
+                },
+                {
+                    "column": "Packet/Bulk Avg",
+                    "type": "float",
+                    "normalization": "ZERO_ONE",
+                    "log1p_norm": true
+                },
+                {
+                    "column": "Bulk Rate Avg",
+                    "type": "float",
+                    "normalization": "ZERO_ONE",
+                    "log1p_norm": true
+                },
+                {
+                    "column": "Subflow Bytes",
+                    "type": "float",
+                    "normalization": "ZERO_ONE",
+                    "log1p_norm": true
+                },
+                {
+                    "column": "Init Win Bytes",
+                    "type": "float",
+                    "normalization": "ZERO_ONE",
+                    "log1p_norm": true
+                },
+                {
+                    "column": "Subflow Packets",
+                    "type": "string",
+                    "encoding": "categorical"
+                },
+                {
+                    "column": "URG Flags",
+		    		"type": "string",
+		    		"encoding": "categorical"
+				}
+            ]
+        }
+    },
+    "model": {
+        "class": "DoppelGANgerTorchModel",
+        "config": {
+            "batch_size": 50,
+            "sample_len": [
+                1,
+                5,
+                10
+            ],
+            "sample_len_expand": true,
+            "epochs": 400,
+            "extra_checkpoint_freq": 10,
+            "epoch_checkpoint_freq": 100
+        }
+    }
+}

@@ -203,27 +203,6 @@ def split_per_chunk(
     split_name = config["split_name"]
     metadata_cols = [m for m in config["metadata"]]
 
-    # Truncate groups with length greater than global_max_flow_len
-    def process_group(group):
-        if len(group) > global_max_flow_len:
-            processed_group = group.head(global_max_flow_len)
-        else:
-            processed_group = group
-        return processed_group
-    
-    def truncate_group(raw_df, metadata_cols):
-        grouped = raw_df.groupby([m.column for m in metadata_cols])
-        processed = grouped.apply(process_group)
-
-        # reset the index of the resulting DataFrame
-        processed = processed.reset_index(drop=True)
-
-        return processed
-    
-    print("Before truncation, df_per_chunk:", df_per_chunk.shape)
-    df_per_chunk = truncate_group(df_per_chunk, metadata_cols)
-    print("After truncation, df_per_chunk:", df_per_chunk.shape)
-
     df_per_chunk, new_metadata_list = apply_per_field(
         original_df=df_per_chunk,
         config_fields=config["metadata"],
@@ -371,6 +350,8 @@ def split_per_chunk(
             else:
                 raise ValueError(
                     f"{ori_group_name} not found in the raw file!")
+                pass
+                print(f"{ori_group_name} not found in the raw file.")
     if config["n_chunks"] > 1:
         data_attribute = np.concatenate(
             (data_attribute, np.array(flow_tags)), axis=1)
@@ -380,26 +361,29 @@ def split_per_chunk(
             (data_attribute, np.array(flow_start_list).reshape(-1, 1)), axis=1)
 
     data_attribute = np.asarray(data_attribute)
+
     data_feature = np.stack(
-        [np.pad(
-            arr,
-            ((0, global_max_flow_len - arr.shape[0]), (0, 0)),
-            mode='constant',
-            constant_values=0) for arr in data_feature])
+            [np.pad(
+                arr,
+                ((0, global_max_flow_len - arr.shape[0]), (0, 0)),
+                mode='constant',
+                constant_values=0) if global_max_flow_len > arr.shape[0] else arr[:global_max_flow_len] for arr in data_feature])
     data_gen_flag = np.stack([np.pad(
-        arr,
-        ((0, global_max_flow_len - arr.shape[0])),
-        mode='constant',
-        constant_values=0) for arr in data_gen_flag])
+            arr,
+            ((0, global_max_flow_len - arr.shape[0])),
+            mode='constant',
+            constant_values=0) if global_max_flow_len > arr.shape[0] else arr[:global_max_flow_len] for arr in data_gen_flag])
     print("data_attribute: {}, {}GB in memory".format(
-        np.shape(data_attribute),
-        data_attribute.size * data_attribute.itemsize / (10**9)))
+            np.shape(data_attribute),
+            data_attribute.size * data_attribute.itemsize / (10**9)))
     print("data_feature: {}, {}GB in memory".format(
-        np.shape(data_feature),
-        data_feature.size * data_feature.itemsize / (10**9)))
+            np.shape(data_feature),
+            data_feature.size * data_feature.itemsize / (10**9)))
     print("data_gen_flag: {}, {}GB in memory".format(
-        np.shape(data_gen_flag),
-        data_gen_flag.size * data_gen_flag.itemsize / (10**9)))
+            np.shape(data_gen_flag),
+            data_gen_flag.size * data_gen_flag.itemsize / (10**9)))
+
+    # Write files
 
     # Write files
     os.makedirs(data_out_dir, exist_ok=True)

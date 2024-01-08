@@ -22,7 +22,7 @@
 - Support generic dataset formats
 - Add [SDMetrics](https://github.com/netsharecmu/SDMetrics_timeseries/tree/master/sdmetrics) for hyperparameter/model selection and data visualization
 
-[2022.08]: The deprecated [`camera-ready`](https://github.com/netsharecmu/NetShare/releases/tag/camera-ready-deprecated) branch holds the scripts we used to run all the experiments in the [paper](https://dl.acm.org/doi/abs/10.1145/3544216.3544251).
+[2022.08]: The outdated [`camera-ready`](https://github.com/netsharecmu/NetShare/tree/camera-ready) branch holds the scripts we used to run all the experiments in the [paper](https://dl.acm.org/doi/abs/10.1145/3544216.3544251).
 
 # Users
 NetShare has been used by several independent users/companies.
@@ -39,17 +39,6 @@ You may also refer to the [README](traces/README.md) for detailed descriptions o
 
 
 # Setup
-## Step 0: Install `libpcap` depdency (Optional)
-If you are working with PCAP files and you have not installed `libpcap`,
-- On MacOS, install using `homebrew`:
-  ```Bash
-  brew install libpcap
-  ```
-- On Debian-based system (e.g., Ubuntu), install using `apt`:
-  ```Bash
-  sudo apt install libpcap-dev
-  ```
-
 ## Step 1: Install NetShare Python package (Required)
 We recommend installing NetShare in a virtual environment (e.g., Anaconda3). We test with virtual environment with Python==3.9.
 
