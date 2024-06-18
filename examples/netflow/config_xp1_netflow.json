@@ -91,7 +91,7 @@
                 5,
                 10
             ],
-            "sample_len_expand": true,
+            "sample_len_expand": false,
             "epochs": 400,
             "extra_checkpoint_freq": 10,
             "epoch_checkpoint_freq": 100

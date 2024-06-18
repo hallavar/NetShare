@@ -1,6 +1,6 @@
 {
     "global_config": {
-        "original_data_file": "/home/aschoen/my_storage/aschoen/dataset/flow_chronicle_dataset/xp1/preprocessed_netshare.csv",
+        "original_data_file": "/home/aschoen/my_storage/aschoen/dataset/flow_chronicle_dataset/xp3/preprocessed_netshare.csv",
         "overwrite": true,
         "dataset_type": "netflow",
         "n_chunks": 1,
@@ -10,7 +10,7 @@
     "pre_post_processor": {
         "class": "NetsharePrePostProcessor",
         "config": {
-            "max_flow_len": 2000,
+            "max_flow_len": 1000,
 	    "timestamp": {
                 "column": "Date first seen",
                 "generation": true,
@@ -43,11 +43,6 @@
                     "column": "Proto",
                     "type": "string",
                     "encoding": "categorical"
-                },
-                {
-                    "column": "Flags",
-                    "type": "string",
-                    "encoding": "categorical"
                 }
             ],
             "timeseries": [
@@ -58,25 +53,7 @@
                     "log1p_norm": true
                 },
                 {
-                    "column": "In Packet",
-                    "type": "float",
-                    "normalization": "ZERO_ONE",
-                    "log1p_norm": true
-                },
-                {
                     "column": "Out Byte",
-                    "type": "float",
-                    "normalization": "ZERO_ONE",
-                    "log1p_norm": true
-                },
-                {
-                    "column": "Out Packet",
-                    "type": "float",
-                    "normalization": "ZERO_ONE",
-                    "log1p_norm": true
-                },
-                {
-                    "column": "Duration",
                     "type": "float",
                     "normalization": "ZERO_ONE",
                     "log1p_norm": true
@@ -88,7 +65,7 @@
     "model": {
         "class": "DoppelGANgerTorchModel",
         "config": {
-            "batch_size": 100,
+            "batch_size": 200,
             "sample_len": [1, 5, 10],
             "sample_len_expand": true,
             "epochs": 100,

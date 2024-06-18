@@ -2,6 +2,7 @@ import argparse
 import random
 import time
 import netshare.ray as ray
+import pandas as pd
 from netshare import Generator
 
 if __name__ == '__main__':
@@ -19,6 +20,9 @@ if __name__ == '__main__':
 
     # configuration file
     t0 = time.time()
+    preprocess = pd.read_csv(f"/home/aschoen/my_storage/aschoen/dataset/flow_chronicle_dataset/{xp}/CIDDS_{xp}_train.csv")
+    preprocess["Date first seen"] = pd.to_datetime(preprocess["Date first seen"]).astype(int)
+    preprocess.to_csv(f"/home/aschoen/my_storage/aschoen/dataset/flow_chronicle_dataset/{xp}/preprocessed_netshare.csv",index=False)
     generator = Generator(config=f"/home/aschoen/programs/FlowChronicle/NetShare/examples/netflow/config_CIDDS_{xp}.json")
     t1 = time.time()
     dif1 = divmod(int(t1-t0),3600)
@@ -27,15 +31,14 @@ if __name__ == '__main__':
     # Please set the `worker_folder` as *absolute path*
     # if you are using Ray with multi-machine setup
     # since Ray has bugs when dealing with relative paths.
-    generator.train(work_folder=f'/home/aschoen/my_storage/aschoen/xp_CIDDS{xp[2]}')
+    generator.train(work_folder=f'/home/aschoen/my_storage/aschoen/xp_CIDDS{xp[2:]}')
     t2 = time.time()
     dif2 = divmod(int(t2-t1),3600)
     print("Training time: {} hours,{} minutes and {} secounds".format(dif2[0], *divmod(dif2[1],60)))
-    generator.generate(work_folder=f'/home/aschoen/my_storage/aschoen/xp_CIDDS{xp[2]}')
+    generator.generate(work_folder=f'/home/aschoen/my_storage/aschoen/xp_CIDDS{xp[2:]}')
     t3 = time.time()
     dif3 = divmod(int(t3-t2),3600)
     print("Sampling time: {} hours,{} minutes and {} secounds".format(dif3[0], *divmod(dif3[1],60)))
-    generator.visualize(work_folder=f'/home/aschoen/my_storage/aschoen/xp_CIDDS{xp[2]}')
     
 
     ray.shutdown()

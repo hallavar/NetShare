@@ -1,9 +1,9 @@
 {
     "global_config": {
-        "original_data_file": "/home/aschoen/my_storage/aschoen/dataset/flow_chronicle_dataset/xp2/CIDDS_002_pretrained_netshare.csv",
+        "original_data_file": "/home/aschoen/my_storage/aschoen/dataset/flow_chronicle_dataset/xp2/preprocessed_netshare.csv",
         "overwrite": true,
         "dataset_type": "netflow",
-        "n_chunks": 2,
+        "n_chunks": 1,
         "dp": false
     },
     "default": "single_event_per_row.json",
@@ -43,6 +43,11 @@
                     "column": "Proto",
                     "type": "string",
                     "encoding": "categorical"
+                },
+                {
+                    "column": "Flags",
+                    "type": "string",
+                    "encoding": "categorical"
                 }
             ],
             "timeseries": [
@@ -53,7 +58,25 @@
                     "log1p_norm": true
                 },
                 {
+                    "column": "In Packet",
+                    "type": "float",
+                    "normalization": "ZERO_ONE",
+                    "log1p_norm": true
+                },
+                {
                     "column": "Out Byte",
+                    "type": "float",
+                    "normalization": "ZERO_ONE",
+                    "log1p_norm": true
+                },
+                {
+                    "column": "Out Packet",
+                    "type": "float",
+                    "normalization": "ZERO_ONE",
+                    "log1p_norm": true
+                },
+                {
+                    "column": "Duration",
                     "type": "float",
                     "normalization": "ZERO_ONE",
                     "log1p_norm": true
@@ -65,12 +88,12 @@
     "model": {
         "class": "DoppelGANgerTorchModel",
         "config": {
-            "batch_size": 50,
-            "sample_len": [5],
+            "batch_size": 100,
+            "sample_len": [1, 5, 10],
             "sample_len_expand": true,
             "epochs": 100,
-            "extra_checkpoint_freq": 3,
-            "epoch_checkpoint_freq": 25
+            "extra_checkpoint_freq": 20,
+            "epoch_checkpoint_freq": 100
         }
     }
 }
