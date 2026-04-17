@@ -1,6 +1,6 @@
 {
     "global_config": {
-        "original_data_file": "../../../../datasets/train.pcap",
+        "original_data_file": "/home/adschoen/public/datasets/train.pcap",
         "overwrite": true,
         "dataset_type": "pcap",
         "n_chunks": 1,
