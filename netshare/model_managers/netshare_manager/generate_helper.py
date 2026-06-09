@@ -107,16 +107,12 @@ def _merge_attr(
             )
             continue
 
-        raw_attr_chunk = np.load(
-            os.path.join(
-                attr_raw_npz_folder,
-                "chunk_id-{}.npz".format(chunkid))
-        )["data_attribute"]
-        raw_attr_discrete_chunk = np.load(
-            os.path.join(
-                attr_raw_npz_folder,
-                "chunk_id-{}.npz".format(chunkid))
-        )["data_attribute_discrete"]
+        raw_attr_path = os.path.join(
+            attr_raw_npz_folder,
+            "chunk_id-{}.npz".format(chunkid))
+        with np.load(raw_attr_path) as raw_attr_npz:
+            raw_attr_chunk = raw_attr_npz["data_attribute"]
+            raw_attr_discrete_chunk = raw_attr_npz["data_attribute_discrete"]
 
         if num_chunks > 1:
             for row_idx, row in enumerate(raw_attr_chunk):
@@ -176,6 +172,7 @@ def _merge_attr(
                 n_flows_startFromThisEpoch, raw_attr_chunk.shape[0]
             )
         )
+        os.remove(raw_attr_path)
 
     print("Saving merged attrs...")
     n_merged_attrs = 0

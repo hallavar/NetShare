@@ -1,15 +1,16 @@
 {
     "global_config": {
-        "original_data_file": "/home/adschoen/public/datasets/train.pcap",
+        "original_data_file": "/home/aschoen/Programs/dataset_april_imc_paper/train.pcap",
         "overwrite": true,
         "dataset_type": "pcap",
-        "n_chunks": 1,
+        "n_chunks": 32,
         "dp": false
     },
     "default": "single_event_per_row.json",
     "pre_post_processor": {
         "class": "NetsharePrePostProcessor",
         "config": {
+            "max_flow_len": 10,
             "timestamp": {
                 "column": "time",
                 "generation": true,
@@ -111,6 +112,12 @@
             "epochs": 40,
             "extra_checkpoint_freq": 1,
             "epoch_checkpoint_freq": 5
+        }
+    },
+    "model_manager": {
+        "class": "NetShareManager",
+        "config": {
+            "skip_chunk0_train": true
         }
     }
 }

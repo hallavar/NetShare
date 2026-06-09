@@ -236,6 +236,7 @@ class DoppelGANgerTorchModel(Model):
             #       given_data_attribute_discrete)
         else:
             print("Generating w/o given data attribute!")
+            given_attr_npz_file = None
             given_data_attribute = None
             given_data_attribute_discrete = None
 
@@ -351,3 +352,6 @@ class DoppelGANgerTorchModel(Model):
                         data_gen_flag=gen_flags,
                         config=self._config
                     )
+        if self._config["given_data_attribute_flag"] and given_attr_npz_file and os.path.exists(given_attr_npz_file):
+            os.remove(given_attr_npz_file)
+            print(f"Removed consumed attribute file {given_attr_npz_file}")

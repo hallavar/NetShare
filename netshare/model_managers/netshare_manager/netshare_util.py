@@ -171,10 +171,17 @@ def _configs2configsgroup(
                             else:
                                 pretrain_dir = ckpt_dir
                         else:
-                            if os.path.exists(os.path.join(
+                            checkpoint_dir = os.path.join(
                                 configs[config_id]["result_folder"],
-                                "checkpoint")
-                            ) and not generation_flag:
+                                "checkpoint"
+                            )
+                            has_epoch_checkpoint = False
+                            if os.path.isdir(checkpoint_dir):
+                                for entry in os.listdir(checkpoint_dir):
+                                    if re.fullmatch(r"epoch_id-\d+\.pt", entry):
+                                        has_epoch_checkpoint = True
+                                        break
+                            if has_epoch_checkpoint and not generation_flag:
                                 raise ValueError(
                                     "Chunk0 training NOT skipped "
                                     "but ckpts already exist! "

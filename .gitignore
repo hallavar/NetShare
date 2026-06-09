@@ -129,6 +129,9 @@ env.bak/
 venv.bak/
 .NetShare-Env/
 
+# Local Codex metadata
+.codex
+
 # Spyder project settings
 .spyderproject
 .spyproject

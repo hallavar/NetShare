@@ -9,6 +9,16 @@ from .util import create_sdmetrics_config, convert_sdmetricsConfigQuant_to_field
 from sdmetrics.reports.timeseries import QualityReport
 
 
+def _read_raw_or_train_csv(folder):
+    for filename in ("raw.csv", "train.csv"):
+        csv_path = os.path.join(folder, filename)
+        if os.path.exists(csv_path):
+            return pd.read_csv(csv_path)
+    raise FileNotFoundError(
+        "Expected raw.csv or train.csv in {}".format(folder)
+    )
+
+
 def compare_rawdf_syndfs(
     raw_df,
     syn_dfs,
@@ -131,10 +141,10 @@ def choose_best_model(
 
         dict_dataset_bestsyndf = {}
 
-    big_raw_df = pd.read_csv(os.path.join(pre_processed_data_folder, "raw.csv"))
     for dpnoisemultiplier, syn_dfs in dict_dataset_syndfs.items():
         assert len(syn_dfs) >= 1
         if len(syn_dfs) > 1:
+            big_raw_df = _read_raw_or_train_csv(pre_processed_data_folder)
             best_syndf_idx, best_syn_df = compare_rawdf_syndfs(
                 big_raw_df[syn_dfs[0].columns],
                 syn_dfs, config_pre_post_processor)

@@ -465,11 +465,9 @@ class DoppelGANger(object):
             dataset,
             batch_size=self.batch_size * self.num_packing,
             shuffle=True,
-            num_workers=2,
-            pin_memory=True,
+            num_workers=0,
+            pin_memory=False,
             drop_last=True,
-            prefetch_factor=2 + self.num_packing,
-            persistent_workers=True,
         )
         iteration = 0
         loss_dict = {
@@ -487,12 +485,20 @@ class DoppelGANger(object):
             loss_dict["attr_d_loss_gp"] = 0.0
             loss_dict["attr_d_loss"] = 0.0
 
-        for epoch in tqdm(range(self.epochs)):
+        epoch_bar = tqdm(range(self.epochs), desc="Epochs", dynamic_ncols=True)
+        for epoch in epoch_bar:
             with open(self.time_path, "a") as f:
                 time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
                 f.write("epoch {} starts: {}\n".format(epoch, time))
 
-            for batch_idx, (real_attribute, real_feature) in enumerate(loader):
+            batch_bar = tqdm(
+                loader,
+                total=len(loader),
+                desc=f"Epoch {epoch + 1}/{self.epochs}",
+                leave=False,
+                dynamic_ncols=True,
+            )
+            for batch_idx, (real_attribute, real_feature) in enumerate(batch_bar):
 
                 real_attribute = real_attribute.to(self.device)
                 real_feature = real_feature.to(self.device)
@@ -642,8 +648,20 @@ class DoppelGANger(object):
                     loss_dict["g_loss"] = gen_loss
 
                 self._write_losses(loss_dict, iteration)
+                batch_bar.set_postfix(
+                    iter=iteration,
+                    d_loss=f"{float(loss_dict['d_loss']):.4f}",
+                    g_loss=f"{float(loss_dict['g_loss']):.4f}",
+                )
 
                 iteration += 1
+
+            batch_bar.close()
+            epoch_bar.set_postfix(
+                last_d_loss=f"{float(loss_dict['d_loss']):.4f}",
+                last_g_loss=f"{float(loss_dict['g_loss']):.4f}",
+                iteration=iteration,
+            )
 
             if (epoch + 1) % self.epoch_checkpoint_freq == 0:
                 ckpt_path = os.path.join(
