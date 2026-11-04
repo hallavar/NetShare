@@ -10,6 +10,10 @@ import netshare.ray as ray
 from netshare import Generator
 from netshare.pre_post_processors.netshare.util import csv2pcap_single
 
+BENCHMARK_ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(BENCHMARK_ROOT / "utils"))
+from pcap_validation import validate_readable_pcap
+
 
 def preprocessed_data_ready(generator: Generator, work_folder: Path) -> bool:
     pre_dir = Path(generator._get_pre_processed_data_folder(str(work_folder)))
@@ -36,7 +40,7 @@ def preprocessed_data_ready(generator: Generator, work_folder: Path) -> bool:
 
 
 def trim_pcap_to_duration(output_pcap: Path, reference_pcap: Path, duration: int) -> None:
-    trim_script = Path(__file__).resolve().parents[3] / "utils" / "trim_pcap.py"
+    trim_script = BENCHMARK_ROOT / "utils" / "trim_pcap.py"
     if not trim_script.exists():
         raise FileNotFoundError(trim_script)
     cmd = [
@@ -57,7 +61,7 @@ def trim_pcap_to_duration(output_pcap: Path, reference_pcap: Path, duration: int
 
 
 def estimate_target_packets(reference_pcap: Path, duration: int) -> int:
-    target_script = Path(__file__).resolve().parents[3] / "utils" / "pcap_target_packets.py"
+    target_script = BENCHMARK_ROOT / "utils" / "pcap_target_packets.py"
     if not target_script.exists():
         raise FileNotFoundError(target_script)
     import subprocess
@@ -96,6 +100,7 @@ def export_best_csv_to_pcap(
         df = df.iloc[:target_packets]
     output_pcap.parent.mkdir(parents=True, exist_ok=True)
     csv2pcap_single(df, str(output_pcap))
+    validate_readable_pcap(output_pcap)
     print(f"[NetShare] Wrote synthetic PCAP to {output_pcap}")
 
 
@@ -209,6 +214,7 @@ def main() -> None:
             target_packets=target_packets,
         )
         trim_pcap_to_duration(output_pcap, datasets_dir / "test.pcap", args.duration)
+        validate_readable_pcap(output_pcap)
 
     ray.shutdown()
 

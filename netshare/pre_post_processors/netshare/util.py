@@ -200,6 +200,7 @@ def prs_int2str(prs_int):
 def csv2pcap_single(input, output):
     # df = pd.read_csv(input).sort_values(["time"])
     df = input.sort_values(["time"])
+    output_tmp = f"{output}.tmp"
 
     packets = []
 
@@ -249,4 +250,9 @@ def csv2pcap_single(input, output):
 
         packets.append(p)
 
-    wrpcap(output, packets)
+    try:
+        wrpcap(output_tmp, packets)
+        os.replace(output_tmp, output)
+    finally:
+        if os.path.exists(output_tmp):
+            os.unlink(output_tmp)
