@@ -1,6 +1,6 @@
 {
     "global_config": {
-        "original_data_file": "/home/aschoen/Programs/dataset_april_imc_paper/train.pcap",
+        "original_data_file": "/media/datasets/aschoen_datasets/dataset_campus/train.pcap",
         "overwrite": true,
         "dataset_type": "pcap",
         "n_chunks": 32,
@@ -117,7 +117,7 @@
     "model_manager": {
         "class": "NetShareManager",
         "config": {
-            "skip_chunk0_train": true
+            "skip_chunk0_train": false
         }
     }
 }

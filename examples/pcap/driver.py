@@ -1,8 +1,9 @@
 import argparse
+import json
 import os
 import sys
+import tempfile
 from pathlib import Path
-from typing import Optional
 
 import pandas as pd
 
@@ -13,6 +14,8 @@ from netshare.pre_post_processors.netshare.util import csv2pcap_single
 BENCHMARK_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(BENCHMARK_ROOT / "utils"))
 from pcap_validation import validate_readable_pcap
+from pcap_size import generate_to_size, resolve_target
+from random_seed import derive_seed, environment_seed, seed_rngs
 
 
 def preprocessed_data_ready(generator: Generator, work_folder: Path) -> bool:
@@ -39,73 +42,32 @@ def preprocessed_data_ready(generator: Generator, work_folder: Path) -> bool:
     return True
 
 
-def trim_pcap_to_duration(output_pcap: Path, reference_pcap: Path, duration: int) -> None:
-    trim_script = BENCHMARK_ROOT / "utils" / "trim_pcap.py"
-    if not trim_script.exists():
-        raise FileNotFoundError(trim_script)
-    cmd = [
-        sys.executable,
-        str(trim_script),
-        "--input",
-        str(output_pcap),
-        "--output",
-        str(output_pcap),
-        "--duration",
-        str(duration),
-        "--reference-pcap",
-        str(reference_pcap),
-    ]
-    import subprocess
-
-    subprocess.check_call(cmd)
-
-
-def estimate_target_packets(reference_pcap: Path, duration: int) -> int:
-    target_script = BENCHMARK_ROOT / "utils" / "pcap_target_packets.py"
-    if not target_script.exists():
-        raise FileNotFoundError(target_script)
-    import subprocess
-
-    out = subprocess.check_output(
-        [
-            sys.executable,
-            str(target_script),
-            "--pcap",
-            str(reference_pcap),
-            "--duration",
-            str(duration),
-        ],
-        text=True,
-    )
-    return int(out.strip())
-
-
-def export_best_csv_to_pcap(
+def iter_best_csv_pcaps(
     work_folder: Path,
-    output_pcap: Path,
-    target_packets: Optional[int] = None,
-) -> None:
+    directory: Path,
+):
     post_dir = work_folder / "post_processed_data"
     csv_candidates = sorted(post_dir.glob("*.csv"))
     if not csv_candidates:
         raise FileNotFoundError(f"No post_processed CSVs found in {post_dir}")
     best_csv = csv_candidates[0]
-    df = pd.read_csv(best_csv)
-    if target_packets is not None:
-        if df.empty:
-            raise RuntimeError(f"Generated CSV is empty: {best_csv}")
-        if target_packets > len(df):
-            repeats = (target_packets + len(df) - 1) // len(df)
-            df = pd.concat([df] * repeats, ignore_index=True)
-        df = df.iloc[:target_packets]
-    output_pcap.parent.mkdir(parents=True, exist_ok=True)
-    csv2pcap_single(df, str(output_pcap))
-    validate_readable_pcap(output_pcap)
-    print(f"[NetShare] Wrote synthetic PCAP to {output_pcap}")
+    # choose_best_model writes CSVs sorted by time. Export in bounded pieces so
+    # a large reference does not require millions of Scapy packets in memory.
+    with pd.read_csv(best_csv, chunksize=10_000) as chunks:
+        for index, frame in enumerate(chunks):
+            if frame.empty:
+                continue
+            pcap = directory / f"part-{index:06d}.pcap"
+            try:
+                csv2pcap_single(frame, str(pcap))
+                yield pcap
+            finally:
+                pcap.unlink(missing_ok=True)
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run NetShare PCAP example pipeline.")
+    parser.add_argument("--seed", type=int, default=environment_seed())
     parser.add_argument(
         "--start-from",
         choices=["train", "generate", "post_process", "visualize", "export"],
@@ -130,18 +92,21 @@ def main() -> None:
         help="Reuse existing pre_processed_data when it already contains all chunk artifacts.",
     )
     parser.add_argument(
-        "--target-packets",
+        "--target-bytes",
         type=int,
-        default=None,
-        help="If set, pad the exported pcap up to this many packets; otherwise count from test.pcap and --duration.",
+        default=int(os.environ.get("TARGET_BYTES", "0")),
+        help="Target PCAP file bytes; 0 matches the entire reference.pcap.",
     )
     parser.add_argument(
-        "--duration",
-        type=int,
-        default=int(os.environ.get("TRAFFIC_DURATION_SECONDS", "600")),
-        help="Duration in seconds for target packet estimation and final trimming.",
+        "--reference-pcap",
+        type=Path,
+        default=None,
+        help="Reference capture (defaults to REFERENCE_PCAP or DATASETS_DIR/reference.pcap).",
     )
+    parser.add_argument("--max-generation-batches", type=int,
+                        default=int(os.environ.get("MAX_GENERATION_BATCHES", "1000")))
     args = parser.parse_args()
+    seed_rngs(args.seed, torch=True)
 
     steps = ["train", "generate", "post_process", "visualize", "export"]
     start_idx = steps.index(args.start_from)
@@ -149,14 +114,28 @@ def main() -> None:
     if start_idx > stop_idx:
         raise ValueError("--start-from cannot come after --stop-after")
 
+    datasets_dir = Path(os.environ.get("DATASETS_DIR", "/media/datasets/aschoen_datasets/dataset_campus"))
+    reference_pcap = args.reference_pcap or Path(os.environ.get(
+        "REFERENCE_PCAP", os.environ.get("TEST_PCAP", str(datasets_dir / "reference.pcap"))))
+    target_bytes = resolve_target(reference_pcap, args.target_bytes)
+    print(f"[NetShare] Target PCAP size: {target_bytes} bytes")
+    config_path = Path(__file__).with_name("config_train_pcap.json")
+    run_name = os.environ.get("RUN_NAME", "campus_reference_size")
+    work_folder = Path(os.environ.get("NETSHARE_WORK_FOLDER", str(
+        Path(__file__).resolve().parents[2] / "results" / run_name)))
+    work_folder.mkdir(parents=True, exist_ok=True)
+    config = json.loads(config_path.read_text())
+    config["model"]["config"]["seed"] = args.seed
+    config["model"]["config"]["generation_seed"] = derive_seed(args.seed, "generation", 1)
+    config["global_config"]["original_data_file"] = os.environ.get("TRAIN_PCAP", str(datasets_dir / "train.pcap"))
+    # Resolve the input before Generator initializes its processors.
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", dir=work_folder) as runtime_config:
+        json.dump(config, runtime_config)
+        runtime_config.flush()
+        generator = Generator(config=runtime_config.name)
+
     ray.config.enabled = False
     ray.init(address="auto")
-
-    config_path = Path(__file__).with_name("config_train_pcap.json")
-    work_folder = Path(__file__).resolve().parents[2] / "results" / "train_pcap"
-    work_folder.parent.mkdir(parents=True, exist_ok=True)
-
-    generator = Generator(config=str(config_path))
 
     if start_idx <= steps.index("train") <= stop_idx:
         if args.reuse_preprocessed and preprocessed_data_ready(generator, work_folder):
@@ -190,30 +169,35 @@ def main() -> None:
     ):
         generator.visualize(work_folder=str(work_folder))
     if start_idx <= steps.index("export") <= stop_idx:
-        datasets_dir = Path(
-            os.environ.get(
-                "DATASETS_DIR",
-                "/home/aschoen/Programs/dataset_april_imc_paper",
-            )
-        )
-        if args.target_packets is None:
-            reference_pcap = datasets_dir / "test.pcap"
-            print(
-                f"[NetShare] Counting target packets in first {args.duration}s of "
-                f"{reference_pcap}"
-            )
-            target_packets = estimate_target_packets(reference_pcap, args.duration)
-            print(f"[NetShare] Target packet count: {target_packets}")
-        else:
-            target_packets = args.target_packets
-            print(f"[NetShare] Using target packet count: {target_packets}")
-        output_pcap = datasets_dir / "netshare.pcap"
-        export_best_csv_to_pcap(
-            work_folder,
-            output_pcap,
-            target_packets=target_packets,
-        )
-        trim_pcap_to_duration(output_pcap, datasets_dir / "test.pcap", args.duration)
+        output_pcap = Path(os.environ.get("OUTPUT_PCAP", str(datasets_dir / "netshare.pcap")))
+
+        def sample_batch(_count: int, directory: Path, index: int):
+            batch_work = work_folder if index == 1 else directory
+            if index > 1:
+                generator._model_config["generation_seed"] = derive_seed(args.seed, "generation", index)
+                # Fresh generation uses the same trained weights; isolate each
+                # batch so old generated CSVs cannot be mistaken for new output.
+                generated = directory / "generated_data"
+                post = directory / "post_processed_data"
+                generated.mkdir()
+                post.mkdir()
+                if not generator._generate(
+                    input_train_data_folder=generator._get_pre_processed_data_folder(str(work_folder)),
+                    input_model_folder=generator._get_model_folder(str(work_folder)),
+                    output_syn_data_folder=str(generated),
+                    log_folder=generator._get_generated_data_log_folder(str(work_folder)),
+                ):
+                    raise RuntimeError("Failed to sample additional NetShare output")
+                if not generator._post_process(
+                    input_folder=str(generated), output_folder=str(post),
+                    log_folder=generator._get_post_processed_data_log_folder(str(work_folder)),
+                    pre_processed_data_folder=generator._get_pre_processed_data_folder(str(work_folder)),
+                ):
+                    raise RuntimeError("Failed to post-process additional NetShare output")
+            yield from iter_best_csv_pcaps(batch_work, directory)
+
+        generate_to_size(reference_pcap, output_pcap, sample_batch, target_bytes,
+                         batch_units=1, max_batches=args.max_generation_batches)
         validate_readable_pcap(output_pcap)
 
     ray.shutdown()

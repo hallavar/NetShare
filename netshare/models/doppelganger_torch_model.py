@@ -2,7 +2,11 @@ import sys
 import os
 import json
 import inspect
+from pathlib import Path
 import numpy as np
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "utils"))
+from random_seed import derive_seed, seed_rngs
 
 from .model import Model
 from netshare.utils import output
@@ -15,6 +19,9 @@ from .doppelganger_torch.load_data import load_data  # NOQA
 
 class DoppelGANgerTorchModel(Model):
     def _train(self, input_train_data_folder, output_model_folder, log_folder):
+        seed = int(self._config.get("seed", 0))
+        chunk = Path(self._config.get("dataset", input_train_data_folder)).name
+        seed_rngs(derive_seed(seed, "train:" + chunk), torch=True)
         print(f"{self.__class__.__name__}.{inspect.stack()[0][3]}")
 
         self._config["result_folder"] = getattr(
@@ -123,6 +130,9 @@ class DoppelGANgerTorchModel(Model):
 
     def _generate(self, input_train_data_folder,
                   input_model_folder, output_syn_data_folder, log_folder):
+        seed = int(self._config.get("generation_seed", self._config.get("seed", 0)))
+        chunk = Path(self._config.get("dataset", input_train_data_folder)).name
+        seed_rngs(derive_seed(seed, "generate:" + chunk), torch=True)
         print(f"{self.__class__.__name__}.{inspect.stack()[0][3]}")
 
         self._config["result_folder"] = getattr(
