@@ -126,6 +126,11 @@ def main() -> None:
     work_folder.mkdir(parents=True, exist_ok=True)
     config = json.loads(config_path.read_text())
     config["model"]["config"]["seed"] = args.seed
+    if "NETSHARE_BATCH_SIZE" in os.environ:
+        batch_size = int(os.environ["NETSHARE_BATCH_SIZE"])
+        if batch_size < 2:
+            raise ValueError("NETSHARE_BATCH_SIZE must be at least 2")
+        config["model"]["config"]["batch_size"] = batch_size
     config["model"]["config"]["generation_seed"] = derive_seed(args.seed, "generation", 1)
     config["global_config"]["original_data_file"] = os.environ.get("TRAIN_PCAP", str(datasets_dir / "train.pcap"))
     # Resolve the input before Generator initializes its processors.

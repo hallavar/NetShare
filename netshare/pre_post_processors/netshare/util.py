@@ -7,6 +7,7 @@ import ast
 import socket
 import struct
 import ipaddress
+from decimal import Decimal
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
@@ -205,7 +206,12 @@ def csv2pcap_single(input, output):
     packets = []
 
     for i, row in tqdm(df.iterrows(), total=df.shape[0]):
-        time = float(row["time"] / 10**6)
+        timestamp_us = float(row["time"])
+        if not math.isfinite(timestamp_us) or timestamp_us < 0:
+            raise ValueError(f"Invalid packet timestamp in microseconds: {timestamp_us}")
+        # Round in the source unit before splitting seconds and microseconds.
+        # Scapy's float path can otherwise write usec=1_000_000 at a carry.
+        time = Decimal(int(round(timestamp_us))) / 10**6
         if isinstance(row["srcip"], str):
             srcip = IP_str2int(row["srcip"])
             dstip = IP_str2int(row["dstip"])

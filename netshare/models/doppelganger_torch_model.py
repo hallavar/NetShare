@@ -67,6 +67,18 @@ class DoppelGANgerTorchModel(Model):
             data_feature, data_gen_flag, data_feature_outputs, self._config["sample_len"]
         )
 
+        # The GAN drops partial batches and uses fixed-size noise tensors. A
+        # requested batch above this chunk's row count would perform no updates.
+        max_batch = len(data_attribute) // int(self._config["num_packing"])
+        if max_batch < 2:
+            raise ValueError("NetShare needs at least two rows per packed batch")
+        requested_batch = int(self._config["batch_size"])
+        self._config["batch_size"] = min(requested_batch, max_batch)
+        print(f"Training batch: {self._config['batch_size']} (requested {requested_batch})")
+        # Record the effective chunk-specific training batch for provenance.
+        with open(os.path.join(self._config["result_folder"], "config.json"), 'w') as fout:
+            json.dump(self._config, fout)
+
         # create directories
         checkpoint_dir = os.path.join(
             self._config["result_folder"],
